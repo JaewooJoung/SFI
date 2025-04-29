@@ -1,10 +1,3 @@
-There is dillema how can I solve this? 
-1. student who graduated wants to find the job but they do not have experience.
-2. company wants ready made and who has experience in professional environement 
-3. to have a special skill you need a lot of money without job.
-4.  
-
-
 Test för SFI C nybörjare/ fortsättning
 Detta kommer att ingà i testet.
 Siffror frän 1-100
