@@ -284,6 +284,8 @@
         <div class="tab" data-lang="swedish">Swedish Only</div>
         <div class="tab" data-lang="english">With English</div>
         <div class="tab" data-lang="korean">With Korean</div>
+        <div class="tab" data-lang="spanish">With Spanish</div>
+        <div class="tab" data-lang="chinese">With Chinese</div>
     </div>
     
     <div id="status">
@@ -329,7 +331,7 @@
                 
                 // Load the database file
                 const startTime = performance.now();
-                const response = await fetch('/SFI/db/DictSV.duckdb');
+                const response = await fetch('./db/DictSV.duckdb');
                 
                 if (!response.ok) {
                     throw new Error(`Failed to load database: ${response.status} ${response.statusText}`);
