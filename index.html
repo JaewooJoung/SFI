@@ -485,14 +485,16 @@
                     
                     for (const lang of languages) {
                         try {
-                            const translationQuery = `SELECT ord, definition FROM ${lang}_translations WHERE id = ?`;
+                            const translationQuery = `SELECT ord, definition, synonym, exempel FROM ${lang}_translations WHERE id = ?`;
                             const translationResult = db.exec(translationQuery, [wordData.id]);
                             
                             if (translationResult.length > 0 && translationResult[0].values.length > 0) {
                                 const transRow = translationResult[0].values[0];
                                 wordData.translations[lang] = {
                                     ord: transRow[0],
-                                    definition: transRow[1]
+                                    definition: transRow[1],
+                                    synonym: transRow[2],
+                                    exempel: transRow[3]
                                 };
                             }
                         } catch (e) {
@@ -564,6 +566,8 @@
                                         <div class="translation-lang">${getLanguageEmoji(lang)} ${capitalizeFirst(lang)}</div>
                                         <div><strong>Word:</strong> ${trans.ord || 'N/A'}</div>
                                         ${trans.definition ? `<div><strong>Definition:</strong> ${trans.definition}</div>` : ''}
+                                        ${trans.synonym ? `<div><strong>Synonyms:</strong> ${trans.synonym}</div>` : ''}
+                                        ${trans.exempel ? `<div><strong>Example:</strong> ${trans.exempel}</div>` : ''}
                                     </div>
                                 `).join('')}
                             </div>
