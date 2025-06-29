@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swedish Dictionary</title>
+    <script src="https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/sql-wasm.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #006AA7, #0099DD);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 106, 167, 0.3);
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header .subtitle {
+            margin-top: 10px;
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .search-container {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        #search-input {
+            flex-grow: 1;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            transition: border-color 0.3s;
+        }
+        
+        #search-input:focus {
+            outline: none;
+            border-color: #006AA7;
+            box-shadow: 0 0 0 3px rgba(0, 106, 167, 0.1);
+        }
+        
+        button {
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #006AA7, #0099DD);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0, 106, 167, 0.3);
+        }
+        
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 106, 167, 0.4);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .reload-btn {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            min-width: 120px;
+        }
+        
+        .reload-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #20c997, #17a2b8);
+        }
+        
+        .language-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+            font-size: 14px;
+        }
+        
+        .tab.active {
+            background: #006AA7;
+            color: white;
+            border-color: #006AA7;
+        }
+        
+        .result {
+            margin-bottom: 20px;
+            border: none;
+            padding: 25px;
+            border-radius: 15px;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .result:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .word-header {
+            display: flex;
+            align-items: baseline;
+            gap: 15px;
+            flex-wrap: wrap;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .word {
+            font-size: 28px;
+            font-weight: bold;
+            color: #006AA7;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .word-class {
+            color: #7f8c8d;
+            font-style: italic;
+            background: #f8f9fa;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        .pronunciation {
+            font-style: italic;
+            color: #7f8c8d;
+            margin: 8px 0;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 6px;
+        }
+        
+        .definition {
+            margin: 15px 0;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+        
+        .example {
+            background: linear-gradient(135deg, #e8f4f8, #d6e9f0);
+            padding: 15px;
+            border-left: 4px solid #006AA7;
+            margin: 15px 0;
+            font-style: italic;
+            border-radius: 8px;
+        }
+        
+        .inflections, .synonyms {
+            margin: 10px 0;
+            font-size: 0.95em;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        
+        .synonyms {
+            color: #2c3e50;
+        }
+        
+        .translations {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .translation {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 3px solid #006AA7;
+        }
+        
+        .translation-lang {
+            font-weight: bold;
+            color: #006AA7;
+            margin-bottom: 5px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .loading .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #006AA7;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #status {
+            margin: 20px 0;
+            font-size: 0.9em;
+            color: #666;
+            text-align: center;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        
+        .error {
+            background: #ff6b6b !important;
+            color: white;
+        }
+        
+        .success {
+            background: #51cf66 !important;
+            color: white;
+        }
+        
+        @media (max-width: 768px) {
+            .search-container {
+                flex-direction: column;
+            }
+            
+            .word {
+                font-size: 24px;
+            }
+            
+            .translations {
+                grid-template-columns: 1fr;
+            }
+            
+            .language-tabs {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🇸🇪 Swedish Dictionary</h1>
+        <div class="subtitle">Svensk-Engelsk Ordbok med Översättningar</div>
+    </div>
+    
+    <div class="search-container">
+        <input type="text" id="search-input" placeholder="Search Swedish or English words..." autofocus>
+        <button id="search-btn">🔍 Search</button>
+        <button id="reload-btn" class="reload-btn">🔄 Reload DB</button>
+    </div>
+    
+    <div class="language-tabs">
+        <div class="tab active" data-lang="all">All Languages</div>
+        <div class="tab" data-lang="swedish">Swedish Only</div>
+        <div class="tab" data-lang="english">With English</div>
+        <div class="tab" data-lang="korean">With Korean</div>
+        <div class="tab" data-lang="spanish">With Spanish</div>
+        <div class="tab" data-lang="chinese">With Chinese</div>
+    </div>
+    
+    <div id="status">
+        <div class="loading">
+            <div class="spinner"></div>
+            Initializing SQLite and loading database...
+        </div>
+    </div>
+    
+    <div id="results"></div>
+    
+    <script>
+        let db = null;
+        let dbLoaded = false;
+        let currentLanguageFilter = 'all';
+        let dbLoadTimestamp = Date.now(); // Track when DB was loaded
+        
+        // Initialize SQL.js and load database
+        async function initializeDatabase(forceReload = false) {
+            try {
+                if (forceReload) {
+                    document.getElementById('status').innerHTML = `
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            Reloading database...
+                        </div>
+                    `;
+                    
+                    // Close existing database if it exists
+                    if (db) {
+                        try {
+                            db.close();
+                        } catch (e) {
+                            console.warn('Error closing existing database:', e);
+                        }
+                    }
+                    
+                    db = null;
+                    dbLoaded = false;
+                } else {
+                    document.getElementById('status').innerHTML = `
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            Initializing SQLite WebAssembly...
+                        </div>
+                    `;
+                }
+                
+                // Wait for SQL.js to be available
+                if (typeof initSqlJs === 'undefined') {
+                    throw new Error('SQL.js library failed to load. Please refresh the page.');
+                }
+                
+                // Initialize SQL.js
+                const SQL = await initSqlJs({
+                    locateFile: file => `https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/${file}`
+                });
+                
+                document.getElementById('status').innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Loading dictionary database...
+                    </div>
+                `;
+                
+                // Try multiple database paths - SQLite version
+                const timestamp = forceReload ? `?t=${Date.now()}` : '';
+                const dbPaths = [
+                    `./db/DictSV.sqlite${timestamp}`,
+                    `./db/DictSV.db${timestamp}`,
+                    `/SFI/db/DictSV.sqlite${timestamp}`,
+                    `/SFI/db/DictSV.db${timestamp}`,
+                    `db/DictSV.sqlite${timestamp}`,
+                    `db/DictSV.db${timestamp}`,
+                    `https://jaewoojoung.github.io/SFI/db/DictSV.sqlite${timestamp}`,
+                    `https://jaewoojoung.github.io/SFI/db/DictSV.db${timestamp}`
+                ];
+                
+                let dbLoadedSuccess = false;
+                let lastError = null;
+                const startTime = performance.now();
+                
+                for (const dbPath of dbPaths) {
+                    try {
+                        console.log(`Trying to load SQLite database from: ${dbPath}`);
+                        const response = await fetch(dbPath);
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        
+                        const buffer = await response.arrayBuffer();
+                        db = new SQL.Database(new Uint8Array(buffer));
+                        
+                        // Test the database connection
+                        const testQuery = db.exec("SELECT COUNT(*) as count FROM swedish_dict");
+                        if (testQuery.length === 0) {
+                            throw new Error('Database loaded but swedish_dict table not found');
+                        }
+                        
+                        const wordCount = testQuery[0].values[0][0];
+                        
+                        const loadTime = ((performance.now() - startTime)/1000).toFixed(2);
+                        dbLoadTimestamp = Date.now();
+                        
+                        document.getElementById('status').innerHTML = `
+                            <div class="success">
+                                ✅ SQLite database ${forceReload ? 'reloaded' : 'loaded'} successfully in ${loadTime} seconds!<br>
+                                📚 Found ${wordCount} Swedish words. Ready to search!<br>
+                                <small>Last updated: ${new Date(dbLoadTimestamp).toLocaleString()}</small>
+                            </div>
+                        `;
+                        
+                        dbLoadedSuccess = true;
+                        break;
+                        
+                    } catch (error) {
+                        console.warn(`Failed to load from ${dbPath}:`, error.message);
+                        lastError = error;
+                        continue;
+                    }
+                }
+                
+                if (!dbLoadedSuccess) {
+                    throw lastError || new Error('Failed to load database from any path');
+                }
+                
+                dbLoaded = true;
+                
+                // Enable search controls
+                document.getElementById('search-btn').disabled = false;
+                document.getElementById('search-input').disabled = false;
+                document.getElementById('reload-btn').disabled = false;
+                document.getElementById('search-input').focus();
+                
+            } catch (error) {
+                console.error("Database initialization error:", error);
+                document.getElementById('status').innerHTML = `
+                    <div class="error">
+                        ❌ Error ${forceReload ? 'reloading' : 'loading'} SQLite database: ${error.message}<br>
+                        <details style="margin-top: 10px;">
+                            <summary>Troubleshooting</summary>
+                            <ul style="text-align: left; margin: 10px 0;">
+                                <li>Check if DictSV.sqlite or DictSV.db exists in the /db/ folder</li>
+                                <li>Convert your DuckDB to SQLite format</li>
+                                <li>Verify the file is accessible via HTTP</li>
+                                <li>Try refreshing the page</li>
+                                <li>Check browser console for detailed errors</li>
+                            </ul>
+                        </details>
+                    </div>
+                `;
+            }
+        }
+        
+        // Reload database function
+        async function reloadDatabase() {
+            if (confirm('Are you sure you want to reload the database? This will clear current results.')) {
+                // Disable buttons during reload
+                document.getElementById('reload-btn').disabled = true;
+                document.getElementById('search-btn').disabled = true;
+                document.getElementById('search-input').disabled = true;
+                
+                // Clear current results
+                document.getElementById('results').innerHTML = '';
+                
+                try {
+                    await initializeDatabase(true); // Force reload
+                } catch (error) {
+                    console.error('Reload failed:', error);
+                } finally {
+                    // Re-enable buttons (initializeDatabase will also enable them if successful)
+                    if (dbLoaded) {
+                        document.getElementById('reload-btn').disabled = false;
+                        document.getElementById('search-btn').disabled = false;
+                        document.getElementById('search-input').disabled = false;
+                    }
+                }
+            }
+        }
+        async function searchWord() {
+            if (!dbLoaded || !db) return;
+            
+            const word = document.getElementById('search-input').value.trim();
+            if (!word) return;
+            
+            document.getElementById('status').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Searching for "${word}"...
+                </div>
+            `;
+            document.getElementById('search-btn').disabled = true;
+            
+            try {
+                const startTime = performance.now();
+                
+                // Main Swedish dictionary query
+                const searchParam = `%${word}%`;
+                const swedishQuery = `
+                    SELECT 
+                        id, ord, bojningar, ordklass, uttal, definition, synonym, exempel, publicerad
+                    FROM swedish_dict 
+                    WHERE 
+                        ord LIKE ? COLLATE NOCASE
+                        OR definition LIKE ? COLLATE NOCASE
+                        OR synonym LIKE ? COLLATE NOCASE
+                    ORDER BY 
+                        CASE 
+                            WHEN ord = ? THEN 1
+                            WHEN ord LIKE ? THEN 2
+                            ELSE 3
+                        END,
+                        ord
+                    LIMIT 20
+                `;
+                
+                const swedishResults = db.exec(swedishQuery, [searchParam, searchParam, searchParam, word, `${word}%`]);
+                
+                if (swedishResults.length === 0) {
+                    document.getElementById('status').innerHTML = `
+                        <div class="success">No results found for "${word}"</div>
+                    `;
+                    displayResults([]);
+                    return;
+                }
+                
+                // Process results
+                const results = [];
+                const columns = swedishResults[0].columns;
+                const values = swedishResults[0].values;
+                
+                for (const row of values) {
+                    const wordData = {};
+                    columns.forEach((col, index) => {
+                        wordData[col] = row[index];
+                    });
+                    
+                    // Get translations for this word
+                    wordData.translations = {};
+                    const languages = ['english', 'korean', 'spanish', 'chinese'];
+                    
+                    for (const lang of languages) {
+                        try {
+                            const translationQuery = `SELECT ord, definition, synonym, exempel FROM ${lang}_translations WHERE id = ?`;
+                            const translationResult = db.exec(translationQuery, [wordData.id]);
+                            
+                            if (translationResult.length > 0 && translationResult[0].values.length > 0) {
+                                const transRow = translationResult[0].values[0];
+                                wordData.translations[lang] = {
+                                    ord: transRow[0],
+                                    definition: transRow[1],
+                                    synonym: transRow[2],
+                                    exempel: transRow[3]
+                                };
+                            }
+                        } catch (e) {
+                            // Translation table might not exist
+                            console.warn(`No ${lang} translations found:`, e.message);
+                        }
+                    }
+                    
+                    results.push(wordData);
+                }
+                
+                const searchTime = ((performance.now() - startTime)/1000).toFixed(2);
+                document.getElementById('status').innerHTML = `
+                    <div class="success">Found ${results.length} results in ${searchTime} seconds</div>
+                `;
+                
+                displayResults(results);
+                
+            } catch (error) {
+                console.error("Search error:", error);
+                document.getElementById('status').innerHTML = `
+                    <div class="error">Search error: ${error.message}</div>
+                `;
+                document.getElementById('results').innerHTML = `
+                    <div class="result">
+                        <div class="error">An error occurred during search. Please try again.</div>
+                    </div>
+                `;
+            } finally {
+                document.getElementById('search-btn').disabled = false;
+            }
+        }
+        
+        // Display results with translations
+        function displayResults(results) {
+            const resultsContainer = document.getElementById('results');
+            
+            if (results.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="result">
+                        <div style="text-align: center; padding: 20px;">
+                            <h3>No results found</h3>
+                            <p>Try a different search term or check your spelling.</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            results.forEach(row => {
+                html += `
+                    <div class="result">
+                        <div class="word-header">
+                            <span class="word">${row.ord || 'N/A'}</span>
+                            ${row.ordklass ? `<span class="word-class">${row.ordklass}</span>` : ''}
+                        </div>
+                        
+                        ${row.bojningar ? `<div class="inflections"><strong>📝 Forms:</strong> ${row.bojningar}</div>` : ''}
+                        ${row.uttal ? `<div class="pronunciation"><strong>🔊 Pronunciation:</strong> ${row.uttal}</div>` : ''}
+                        ${row.definition ? `<div class="definition"><strong>Definition:</strong> ${row.definition}</div>` : ''}
+                        ${row.synonym ? `<div class="synonyms"><strong>🔗 Synonyms:</strong> ${row.synonym}</div>` : ''}
+                        ${row.exempel ? `<div class="example"><strong>💬 Example:</strong> ${row.exempel}</div>` : ''}
+                        
+                        ${Object.keys(row.translations).length > 0 ? `
+                            <div class="translations">
+                                ${Object.entries(row.translations).map(([lang, trans]) => `
+                                    <div class="translation">
+                                        <div class="translation-lang">${getLanguageEmoji(lang)} ${capitalizeFirst(lang)}</div>
+                                        <div><strong>Word:</strong> ${trans.ord || 'N/A'}</div>
+                                        ${trans.definition ? `<div><strong>Definition:</strong> ${trans.definition}</div>` : ''}
+                                        ${trans.synonym ? `<div><strong>Synonyms:</strong> ${trans.synonym}</div>` : ''}
+                                        ${trans.exempel ? `<div><strong>Example:</strong> ${trans.exempel}</div>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        
+                        ${row.publicerad ? `<div style="font-size:0.8em;color:#999;margin-top:15px;text-align:right;">📅 Published: ${row.publicerad}</div>` : ''}
+                    </div>
+                `;
+            });
+            
+            resultsContainer.innerHTML = html;
+        }
+        
+        function getLanguageEmoji(lang) {
+            const emojis = {
+                'english': '🇺🇸',
+                'korean': '🇰🇷', 
+                'spanish': '🇪🇸',
+                'chinese': '🇨🇳'
+            };
+            return emojis[lang] || '🌐';
+        }
+        
+        function capitalizeFirst(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+        
+        // Initialize everything when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            // Disable search until DB is loaded
+            document.getElementById('search-btn').disabled = true;
+            document.getElementById('search-input').disabled = true;
+            document.getElementById('reload-btn').disabled = true;
+            
+            // Set up event listeners
+            document.getElementById('search-btn').addEventListener('click', searchWord);
+            document.getElementById('reload-btn').addEventListener('click', reloadDatabase);
+            document.getElementById('search-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') searchWord();
+            });
+            
+            // Language tab functionality
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentLanguageFilter = tab.dataset.lang;
+                });
+            });
+            
+            // Initialize the database
+            initializeDatabase();
+        });
+    </script>
+</body>
+</html>
