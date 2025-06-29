@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Swedish Dictionary</title>
-    <script src="https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@latest/dist/duckdb-browser-eh.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.0/dist/duckdb-browser-eh.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -313,13 +313,25 @@
                     </div>
                 `;
                 
-                // Initialize DuckDB WASM
-                const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
-                const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
-                const worker = new Worker(bundle.mainWorker);
-                const logger = new duckdb.ConsoleLogger();
-                db = new duckdb.AsyncDuckDB(logger, worker);
-                await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+                // Wait for DuckDB to be available
+                if (typeof duckdb === 'undefined') {
+                    throw new Error('DuckDB library failed to load. Please refresh the page.');
+                }
+                
+                // Initialize DuckDB WASM with error handling
+                let bundle, worker, logger;
+                try {
+                    const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
+                    bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+                    worker = new Worker(bundle.mainWorker);
+                    logger = new duckdb.ConsoleLogger();
+                    db = new duckdb.AsyncDuckDB(logger, worker);
+                    await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+                } catch (e) {
+                    console.error('DuckDB initialization error:', e);
+                    throw new Error('Failed to initialize DuckDB WebAssembly');
+                }
+                
                 conn = await db.connect();
                 
                 document.getElementById('status').innerHTML = `
@@ -329,24 +341,55 @@
                     </div>
                 `;
                 
-                // Load the database file
-                const startTime = performance.now();
-                const response = await fetch('./db/DictSV.duckdb');
+                // Try multiple database paths
+                const dbPaths = [
+                    './db/DictSV.duckdb',
+                    '/SFI/db/DictSV.duckdb', 
+                    'db/DictSV.duckdb',
+                    'https://jaewoojoung.github.io/SFI/db/DictSV.duckdb'
+                ];
                 
-                if (!response.ok) {
-                    throw new Error(`Failed to load database: ${response.status} ${response.statusText}`);
+                let dbLoaded = false;
+                let lastError = null;
+                const startTime = performance.now();
+                
+                for (const dbPath of dbPaths) {
+                    try {
+                        console.log(`Trying to load database from: ${dbPath}`);
+                        const response = await fetch(dbPath);
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        
+                        const buffer = await response.arrayBuffer();
+                        await db.registerFileBuffer('DictSV.duckdb', new Uint8Array(buffer));
+                        
+                        // Test the database connection
+                        const testResult = await conn.query("SELECT COUNT(*) as count FROM 'DictSV.duckdb'.swedish_dict");
+                        const wordCount = testResult.get(0).count;
+                        
+                        const loadTime = ((performance.now() - startTime)/1000).toFixed(2);
+                        document.getElementById('status').innerHTML = `
+                            <div class="success">
+                                ✅ Database loaded successfully in ${loadTime} seconds!<br>
+                                📚 Found ${wordCount} Swedish words. Ready to search!
+                            </div>
+                        `;
+                        
+                        dbLoaded = true;
+                        break;
+                        
+                    } catch (error) {
+                        console.warn(`Failed to load from ${dbPath}:`, error.message);
+                        lastError = error;
+                        continue;
+                    }
                 }
                 
-                const buffer = await response.arrayBuffer();
-                await db.registerFileBuffer('DictSV.duckdb', new Uint8Array(buffer));
-                
-                // Test the database connection
-                await conn.query("SELECT COUNT(*) as count FROM 'DictSV.duckdb'.swedish_dict");
-                
-                const loadTime = ((performance.now() - startTime)/1000).toFixed(2);
-                document.getElementById('status').innerHTML = `
-                    <div class="success">Database loaded successfully in ${loadTime} seconds! Ready to search.</div>
-                `;
+                if (!dbLoaded) {
+                    throw lastError || new Error('Failed to load database from any path');
+                }
                 
                 dbLoaded = true;
                 
@@ -360,7 +403,15 @@
                 document.getElementById('status').innerHTML = `
                     <div class="error">
                         ❌ Error loading database: ${error.message}<br>
-                        Please check if the database file exists at the specified URL.
+                        <details style="margin-top: 10px;">
+                            <summary>Troubleshooting</summary>
+                            <ul style="text-align: left; margin: 10px 0;">
+                                <li>Check if DictSV.duckdb exists in the /db/ folder</li>
+                                <li>Verify the file is accessible via HTTP</li>
+                                <li>Try refreshing the page</li>
+                                <li>Check browser console for detailed errors</li>
+                            </ul>
+                        </details>
                     </div>
                 `;
             }
@@ -557,8 +608,20 @@
                 });
             });
             
-            // Initialize the database
-            initializeDatabase();
+            // Wait a bit for the DuckDB library to load, then initialize
+            setTimeout(() => {
+                if (typeof duckdb !== 'undefined') {
+                    initializeDatabase();
+                } else {
+                    console.error('DuckDB library not loaded');
+                    document.getElementById('status').innerHTML = `
+                        <div class="error">
+                            ❌ DuckDB library failed to load. Please refresh the page.<br>
+                            <small>If the problem persists, check your internet connection.</small>
+                        </div>
+                    `;
+                }
+            }, 1000);
         });
     </script>
 </body>
