@@ -4,195 +4,484 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Swedish Dictionary</title>
-    <script src="https://cdn.jsdelivr.net/npm/duckdb@latest/dist/duckdb.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@latest/dist/duckdb-browser-eh.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
         }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #006AA7, #0099DD);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 106, 167, 0.3);
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header .subtitle {
+            margin-top: 10px;
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
         .search-container {
-            margin-bottom: 20px;
+            margin-bottom: 30px;
             display: flex;
-            gap: 10px;
+            gap: 15px;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
+        
         #search-input {
             flex-grow: 1;
-            padding: 10px;
+            padding: 15px;
             font-size: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            transition: border-color 0.3s;
         }
+        
+        #search-input:focus {
+            outline: none;
+            border-color: #006AA7;
+            box-shadow: 0 0 0 3px rgba(0, 106, 167, 0.1);
+        }
+        
         button {
-            padding: 10px 15px;
-            background-color: #006AA7; /* Swedish blue */
-            color: #FECC00; /* Swedish gold */
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #006AA7, #0099DD);
+            color: white;
             border: none;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
+            font-size: 16px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0, 106, 167, 0.3);
         }
-        button:hover {
-            background-color: #005080;
+        
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 106, 167, 0.4);
         }
-        .result {
-            margin-top: 20px;
-            border: 1px solid #ddd;
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .language-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: white;
             padding: 15px;
-            border-radius: 5px;
-            background-color: #f8f8f8;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
         }
+        
+        .tab {
+            padding: 10px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+        
+        .tab.active {
+            background: #006AA7;
+            color: white;
+            border-color: #006AA7;
+        }
+        
+        .result {
+            margin-bottom: 20px;
+            border: none;
+            padding: 25px;
+            border-radius: 15px;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .result:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
         .word-header {
             display: flex;
             align-items: baseline;
             gap: 15px;
             flex-wrap: wrap;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
         }
+        
         .word {
-            font-size: 24px;
+            font-size: 28px;
             font-weight: bold;
-            color: #2c3e50;
+            color: #006AA7;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
         }
+        
         .word-class {
             color: #7f8c8d;
             font-style: italic;
+            background: #f8f9fa;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
         }
+        
         .pronunciation {
             font-style: italic;
             color: #7f8c8d;
-            margin: 5px 0;
+            margin: 8px 0;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 6px;
         }
+        
         .definition {
-            margin: 10px 0;
-            line-height: 1.5;
+            margin: 15px 0;
+            line-height: 1.6;
+            font-size: 16px;
         }
+        
         .example {
-            background-color: #e8f4f8;
-            padding: 10px;
-            border-left: 3px solid #006AA7;
-            margin: 10px 0;
+            background: linear-gradient(135deg, #e8f4f8, #d6e9f0);
+            padding: 15px;
+            border-left: 4px solid #006AA7;
+            margin: 15px 0;
             font-style: italic;
+            border-radius: 8px;
         }
-        .inflections {
-            margin: 5px 0;
-            font-size: 0.9em;
+        
+        .inflections, .synonyms {
+            margin: 10px 0;
+            font-size: 0.95em;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
         }
+        
         .synonyms {
-            margin: 5px 0;
-            font-size: 0.9em;
             color: #2c3e50;
         }
+        
+        .translations {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .translation {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 3px solid #006AA7;
+        }
+        
+        .translation-lang {
+            font-weight: bold;
+            color: #006AA7;
+            margin-bottom: 5px;
+        }
+        
         .loading {
             text-align: center;
-            padding: 20px;
+            padding: 40px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
+        
+        .loading .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #006AA7;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
         #status {
-            margin-top: 10px;
+            margin: 20px 0;
             font-size: 0.9em;
             color: #666;
+            text-align: center;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        
+        .error {
+            background: #ff6b6b !important;
+            color: white;
+        }
+        
+        .success {
+            background: #51cf66 !important;
+            color: white;
+        }
+        
+        @media (max-width: 768px) {
+            .search-container {
+                flex-direction: column;
+            }
+            
+            .word {
+                font-size: 24px;
+            }
+            
+            .translations {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>Swedish-English Dictionary</h1>
+    <div class="header">
+        <h1>🇸🇪 Swedish Dictionary</h1>
+        <div class="subtitle">Svensk-Engelsk Ordbok med Översättningar</div>
+    </div>
     
     <div class="search-container">
-        <input type="text" id="search-input" placeholder="Search Swedish or English..." autofocus>
-        <button id="search-btn">Search</button>
+        <input type="text" id="search-input" placeholder="Search Swedish or English words..." autofocus>
+        <button id="search-btn">🔍 Search</button>
     </div>
-    <div id="status">Database loading...</div>
+    
+    <div class="language-tabs">
+        <div class="tab active" data-lang="all">All Languages</div>
+        <div class="tab" data-lang="swedish">Swedish Only</div>
+        <div class="tab" data-lang="english">With English</div>
+        <div class="tab" data-lang="korean">With Korean</div>
+    </div>
+    
+    <div id="status">
+        <div class="loading">
+            <div class="spinner"></div>
+            Initializing DuckDB and loading database...
+        </div>
+    </div>
     
     <div id="results"></div>
     
     <script>
-        // Initialize DuckDB
-        const db = new duckdb.Database(':memory:');
-        const connection = db.connect();
+        let db = null;
+        let conn = null;
         let dbLoaded = false;
+        let currentLanguageFilter = 'all';
         
-        // Load the database
-        async function loadDatabase() {
+        // Initialize DuckDB and load database
+        async function initializeDatabase() {
             try {
+                document.getElementById('status').innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Initializing DuckDB WebAssembly...
+                    </div>
+                `;
+                
+                // Initialize DuckDB WASM
+                const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
+                const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+                const worker = new Worker(bundle.mainWorker);
+                const logger = new duckdb.ConsoleLogger();
+                db = new duckdb.AsyncDuckDB(logger, worker);
+                await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+                conn = await db.connect();
+                
+                document.getElementById('status').innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Loading dictionary database...
+                    </div>
+                `;
+                
+                // Load the database file
                 const startTime = performance.now();
-                const response = await fetch('db/DictSV.duckdb');
+                const response = await fetch('https://jaewoojoung.github.io/SFI/db/DictSV.duckdb');
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(`Failed to load database: ${response.status} ${response.statusText}`);
                 }
                 
                 const buffer = await response.arrayBuffer();
-                await connection.registerFileBuffer('DictSV.duckdb', new Uint8Array(buffer));
-                await connection.query("ATTACH 'DictSV.duckdb' AS dict_db");
+                await db.registerFileBuffer('DictSV.duckdb', new Uint8Array(buffer));
+                
+                // Test the database connection
+                await conn.query("SELECT COUNT(*) as count FROM 'DictSV.duckdb'.swedish_dict");
                 
                 const loadTime = ((performance.now() - startTime)/1000).toFixed(2);
-                document.getElementById('status').textContent = `Database loaded in ${loadTime} seconds`;
+                document.getElementById('status').innerHTML = `
+                    <div class="success">Database loaded successfully in ${loadTime} seconds! Ready to search.</div>
+                `;
+                
                 dbLoaded = true;
                 
-                // Enable search
+                // Enable search controls
                 document.getElementById('search-btn').disabled = false;
                 document.getElementById('search-input').disabled = false;
+                document.getElementById('search-input').focus();
                 
             } catch (error) {
-                console.error("Database load error:", error);
-                document.getElementById('status').textContent = "Error loading database. Please refresh the page.";
+                console.error("Database initialization error:", error);
+                document.getElementById('status').innerHTML = `
+                    <div class="error">
+                        ❌ Error loading database: ${error.message}<br>
+                        Please check if the database file exists at the specified URL.
+                    </div>
+                `;
             }
         }
         
-        // Search function
+        // Search function with translation support
         async function searchWord() {
             if (!dbLoaded) return;
             
             const word = document.getElementById('search-input').value.trim();
             if (!word) return;
             
-            document.getElementById('status').textContent = "Searching...";
+            document.getElementById('status').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Searching for "${word}"...
+                </div>
+            `;
             document.getElementById('search-btn').disabled = true;
             
             try {
                 const startTime = performance.now();
-                const results = await connection.query(`
+                
+                // Main Swedish dictionary query
+                const swedishResults = await conn.query(`
                     SELECT 
-                        ord, 
-                        bojningar, 
-                        ordklass, 
-                        uttal, 
-                        definition, 
-                        synonym, 
-                        exempel,
-                        publicerad
-                    FROM dict_db.swedish_dict 
+                        s.id,
+                        s.ord, 
+                        s.bojningar, 
+                        s.ordklass, 
+                        s.uttal, 
+                        s.definition, 
+                        s.synonym, 
+                        s.exempel,
+                        s.publicerad
+                    FROM 'DictSV.duckdb'.swedish_dict s
                     WHERE 
-                        ord LIKE '%' || $1 || '%' 
-                        OR definition LIKE '%' || $1 || '%'
-                        OR synonym LIKE '%' || $1 || '%'
+                        s.ord ILIKE '%' || $1 || '%' 
+                        OR s.definition ILIKE '%' || $1 || '%'
+                        OR s.synonym ILIKE '%' || $1 || '%'
                     ORDER BY 
                         CASE 
-                            WHEN ord = $1 THEN 1
-                            WHEN ord LIKE $1 || '%' THEN 2
+                            WHEN s.ord ILIKE $1 THEN 1
+                            WHEN s.ord ILIKE $1 || '%' THEN 2
                             ELSE 3
                         END,
-                        ord
-                    LIMIT 50
+                        s.ord
+                    LIMIT 20
                 `, [word]);
                 
+                // Get translations for the found words
+                const results = [];
+                for (const row of swedishResults) {
+                    const wordData = {
+                        id: row.id,
+                        ord: row.ord,
+                        bojningar: row.bojningar,
+                        ordklass: row.ordklass,
+                        uttal: row.uttal,
+                        definition: row.definition,
+                        synonym: row.synonym,
+                        exempel: row.exempel,
+                        publicerad: row.publicerad,
+                        translations: {}
+                    };
+                    
+                    // Get translations
+                    const languages = ['english', 'korean', 'spanish', 'chinese'];
+                    for (const lang of languages) {
+                        try {
+                            const translationResult = await conn.query(`
+                                SELECT ord, definition 
+                                FROM 'DictSV.duckdb'.${lang}_translations 
+                                WHERE id = $1
+                            `, [row.id]);
+                            
+                            if (translationResult.length > 0) {
+                                wordData.translations[lang] = translationResult[0];
+                            }
+                        } catch (e) {
+                            // Translation table might not exist or be empty
+                            console.warn(`No ${lang} translations found`);
+                        }
+                    }
+                    
+                    results.push(wordData);
+                }
+                
                 const searchTime = ((performance.now() - startTime)/1000).toFixed(2);
-                document.getElementById('status').textContent = `Found ${results.length} results in ${searchTime} seconds`;
+                document.getElementById('status').innerHTML = `
+                    <div class="success">Found ${results.length} results in ${searchTime} seconds</div>
+                `;
                 
                 displayResults(results);
+                
             } catch (error) {
                 console.error("Search error:", error);
-                document.getElementById('status').textContent = "Search error occurred";
-                document.getElementById('results').innerHTML = 
-                    '<div class="result">An error occurred during search. Please try again.</div>';
+                document.getElementById('status').innerHTML = `
+                    <div class="error">Search error: ${error.message}</div>
+                `;
+                document.getElementById('results').innerHTML = `
+                    <div class="result">
+                        <div class="error">An error occurred during search. Please try again.</div>
+                    </div>
+                `;
             } finally {
                 document.getElementById('search-btn').disabled = false;
             }
         }
         
-        // Display results
+        // Display results with translations
         function displayResults(results) {
             const resultsContainer = document.getElementById('results');
             
             if (results.length === 0) {
-                resultsContainer.innerHTML = '<div class="result">No results found. Try a different search term.</div>';
+                resultsContainer.innerHTML = `
+                    <div class="result">
+                        <div style="text-align: center; padding: 20px;">
+                            <h3>No results found</h3>
+                            <p>Try a different search term or check your spelling.</p>
+                        </div>
+                    </div>
+                `;
                 return;
             }
             
@@ -201,15 +490,29 @@
                 html += `
                     <div class="result">
                         <div class="word-header">
-                            <span class="word">${row.ord}</span>
+                            <span class="word">${row.ord || 'N/A'}</span>
                             ${row.ordklass ? `<span class="word-class">${row.ordklass}</span>` : ''}
                         </div>
-                        ${row.bojningar ? `<div class="inflections"><strong>Forms:</strong> ${row.bojningar}</div>` : ''}
-                        ${row.uttal ? `<div class="pronunciation"><strong>Pronunciation:</strong> ${row.uttal}</div>` : ''}
-                        ${row.definition ? `<div class="definition">${row.definition}</div>` : ''}
-                        ${row.synonym ? `<div class="synonyms"><strong>Synonyms:</strong> ${row.synonym}</div>` : ''}
-                        ${row.exempel ? `<div class="example"><strong>Example:</strong> ${row.exempel}</div>` : ''}
-                        ${row.publicerad ? `<div style="font-size:0.8em;color:#999;">Published: ${row.publicerad}</div>` : ''}
+                        
+                        ${row.bojningar ? `<div class="inflections"><strong>📝 Forms:</strong> ${row.bojningar}</div>` : ''}
+                        ${row.uttal ? `<div class="pronunciation"><strong>🔊 Pronunciation:</strong> ${row.uttal}</div>` : ''}
+                        ${row.definition ? `<div class="definition"><strong>Definition:</strong> ${row.definition}</div>` : ''}
+                        ${row.synonym ? `<div class="synonyms"><strong>🔗 Synonyms:</strong> ${row.synonym}</div>` : ''}
+                        ${row.exempel ? `<div class="example"><strong>💬 Example:</strong> ${row.exempel}</div>` : ''}
+                        
+                        ${Object.keys(row.translations).length > 0 ? `
+                            <div class="translations">
+                                ${Object.entries(row.translations).map(([lang, trans]) => `
+                                    <div class="translation">
+                                        <div class="translation-lang">${getLanguageEmoji(lang)} ${capitalizeFirst(lang)}</div>
+                                        <div><strong>Word:</strong> ${trans.ord || 'N/A'}</div>
+                                        ${trans.definition ? `<div><strong>Definition:</strong> ${trans.definition}</div>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        
+                        ${row.publicerad ? `<div style="font-size:0.8em;color:#999;margin-top:15px;text-align:right;">📅 Published: ${row.publicerad}</div>` : ''}
                     </div>
                 `;
             });
@@ -217,7 +520,21 @@
             resultsContainer.innerHTML = html;
         }
         
-        // Initialize
+        function getLanguageEmoji(lang) {
+            const emojis = {
+                'english': '🇺🇸',
+                'korean': '🇰🇷', 
+                'spanish': '🇪🇸',
+                'chinese': '🇨🇳'
+            };
+            return emojis[lang] || '🌐';
+        }
+        
+        function capitalizeFirst(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+        
+        // Initialize everything when page loads
         document.addEventListener('DOMContentLoaded', () => {
             // Disable search until DB is loaded
             document.getElementById('search-btn').disabled = true;
@@ -229,8 +546,17 @@
                 if (e.key === 'Enter') searchWord();
             });
             
-            // Load the database
-            loadDatabase();
+            // Language tab functionality
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentLanguageFilter = tab.dataset.lang;
+                });
+            });
+            
+            // Initialize the database
+            initializeDatabase();
         });
     </script>
 </body>
