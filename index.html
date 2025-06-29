@@ -329,7 +329,7 @@
                 
                 // Load the database file
                 const startTime = performance.now();
-                const response = await fetch('https://jaewoojoung.github.io/SFI/db/DictSV.duckdb');
+                const response = await fetch('/SFI/db/DictSV.duckdb');
                 
                 if (!response.ok) {
                     throw new Error(`Failed to load database: ${response.status} ${response.statusText}`);
