@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Swedish Dictionary</title>
-    <script src="https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.0/dist/duckdb-browser-eh.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/sql-wasm.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -95,6 +95,7 @@
             padding: 15px;
             border-radius: 10px;
             box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
         }
         
         .tab {
@@ -104,6 +105,7 @@
             cursor: pointer;
             transition: all 0.3s;
             background: white;
+            font-size: 14px;
         }
         
         .tab.active {
@@ -265,6 +267,10 @@
             .translations {
                 grid-template-columns: 1fr;
             }
+            
+            .language-tabs {
+                justify-content: center;
+            }
         }
     </style>
 </head>
@@ -291,7 +297,7 @@
     <div id="status">
         <div class="loading">
             <div class="spinner"></div>
-            Initializing DuckDB and loading database...
+            Initializing SQLite and loading database...
         </div>
     </div>
     
@@ -299,40 +305,28 @@
     
     <script>
         let db = null;
-        let conn = null;
         let dbLoaded = false;
         let currentLanguageFilter = 'all';
         
-        // Initialize DuckDB and load database
+        // Initialize SQL.js and load database
         async function initializeDatabase() {
             try {
                 document.getElementById('status').innerHTML = `
                     <div class="loading">
                         <div class="spinner"></div>
-                        Initializing DuckDB WebAssembly...
+                        Initializing SQLite WebAssembly...
                     </div>
                 `;
                 
-                // Wait for DuckDB to be available
-                if (typeof duckdb === 'undefined') {
-                    throw new Error('DuckDB library failed to load. Please refresh the page.');
+                // Wait for SQL.js to be available
+                if (typeof initSqlJs === 'undefined') {
+                    throw new Error('SQL.js library failed to load. Please refresh the page.');
                 }
                 
-                // Initialize DuckDB WASM with error handling
-                let bundle, worker, logger;
-                try {
-                    const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
-                    bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
-                    worker = new Worker(bundle.mainWorker);
-                    logger = new duckdb.ConsoleLogger();
-                    db = new duckdb.AsyncDuckDB(logger, worker);
-                    await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
-                } catch (e) {
-                    console.error('DuckDB initialization error:', e);
-                    throw new Error('Failed to initialize DuckDB WebAssembly');
-                }
-                
-                conn = await db.connect();
+                // Initialize SQL.js
+                const SQL = await initSqlJs({
+                    locateFile: file => `https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/${file}`
+                });
                 
                 document.getElementById('status').innerHTML = `
                     <div class="loading">
@@ -341,21 +335,25 @@
                     </div>
                 `;
                 
-                // Try multiple database paths
+                // Try multiple database paths - SQLite version
                 const dbPaths = [
-                    './db/DictSV.duckdb',
-                    '/SFI/db/DictSV.duckdb', 
-                    'db/DictSV.duckdb',
-                    'https://jaewoojoung.github.io/SFI/db/DictSV.duckdb'
+                    './db/DictSV.sqlite',
+                    './db/DictSV.db',
+                    '/SFI/db/DictSV.sqlite',
+                    '/SFI/db/DictSV.db',
+                    'db/DictSV.sqlite',
+                    'db/DictSV.db',
+                    'https://jaewoojoung.github.io/SFI/db/DictSV.sqlite',
+                    'https://jaewoojoung.github.io/SFI/db/DictSV.db'
                 ];
                 
-                let dbLoaded = false;
+                let dbLoadedSuccess = false;
                 let lastError = null;
                 const startTime = performance.now();
                 
                 for (const dbPath of dbPaths) {
                     try {
-                        console.log(`Trying to load database from: ${dbPath}`);
+                        console.log(`Trying to load SQLite database from: ${dbPath}`);
                         const response = await fetch(dbPath);
                         
                         if (!response.ok) {
@@ -363,21 +361,25 @@
                         }
                         
                         const buffer = await response.arrayBuffer();
-                        await db.registerFileBuffer('DictSV.duckdb', new Uint8Array(buffer));
+                        db = new SQL.Database(new Uint8Array(buffer));
                         
                         // Test the database connection
-                        const testResult = await conn.query("SELECT COUNT(*) as count FROM 'DictSV.duckdb'.swedish_dict");
-                        const wordCount = testResult.get(0).count;
+                        const testQuery = db.exec("SELECT COUNT(*) as count FROM swedish_dict");
+                        if (testQuery.length === 0) {
+                            throw new Error('Database loaded but swedish_dict table not found');
+                        }
+                        
+                        const wordCount = testQuery[0].values[0][0];
                         
                         const loadTime = ((performance.now() - startTime)/1000).toFixed(2);
                         document.getElementById('status').innerHTML = `
                             <div class="success">
-                                ✅ Database loaded successfully in ${loadTime} seconds!<br>
+                                ✅ SQLite database loaded successfully in ${loadTime} seconds!<br>
                                 📚 Found ${wordCount} Swedish words. Ready to search!
                             </div>
                         `;
                         
-                        dbLoaded = true;
+                        dbLoadedSuccess = true;
                         break;
                         
                     } catch (error) {
@@ -387,7 +389,7 @@
                     }
                 }
                 
-                if (!dbLoaded) {
+                if (!dbLoadedSuccess) {
                     throw lastError || new Error('Failed to load database from any path');
                 }
                 
@@ -402,11 +404,12 @@
                 console.error("Database initialization error:", error);
                 document.getElementById('status').innerHTML = `
                     <div class="error">
-                        ❌ Error loading database: ${error.message}<br>
+                        ❌ Error loading SQLite database: ${error.message}<br>
                         <details style="margin-top: 10px;">
                             <summary>Troubleshooting</summary>
                             <ul style="text-align: left; margin: 10px 0;">
-                                <li>Check if DictSV.duckdb exists in the /db/ folder</li>
+                                <li>Check if DictSV.sqlite or DictSV.db exists in the /db/ folder</li>
+                                <li>Convert your DuckDB to SQLite format</li>
                                 <li>Verify the file is accessible via HTTP</li>
                                 <li>Try refreshing the page</li>
                                 <li>Check browser console for detailed errors</li>
@@ -419,7 +422,7 @@
         
         // Search function with translation support
         async function searchWord() {
-            if (!dbLoaded) return;
+            if (!dbLoaded || !db) return;
             
             const word = document.getElementById('search-input').value.trim();
             if (!word) return;
@@ -436,64 +439,65 @@
                 const startTime = performance.now();
                 
                 // Main Swedish dictionary query
-                const swedishResults = await conn.query(`
+                const searchParam = `%${word}%`;
+                const swedishQuery = `
                     SELECT 
-                        s.id,
-                        s.ord, 
-                        s.bojningar, 
-                        s.ordklass, 
-                        s.uttal, 
-                        s.definition, 
-                        s.synonym, 
-                        s.exempel,
-                        s.publicerad
-                    FROM 'DictSV.duckdb'.swedish_dict s
+                        id, ord, bojningar, ordklass, uttal, definition, synonym, exempel, publicerad
+                    FROM swedish_dict 
                     WHERE 
-                        s.ord ILIKE '%' || $1 || '%' 
-                        OR s.definition ILIKE '%' || $1 || '%'
-                        OR s.synonym ILIKE '%' || $1 || '%'
+                        ord LIKE ? COLLATE NOCASE
+                        OR definition LIKE ? COLLATE NOCASE
+                        OR synonym LIKE ? COLLATE NOCASE
                     ORDER BY 
                         CASE 
-                            WHEN s.ord ILIKE $1 THEN 1
-                            WHEN s.ord ILIKE $1 || '%' THEN 2
+                            WHEN ord = ? THEN 1
+                            WHEN ord LIKE ? THEN 2
                             ELSE 3
                         END,
-                        s.ord
+                        ord
                     LIMIT 20
-                `, [word]);
+                `;
                 
-                // Get translations for the found words
+                const swedishResults = db.exec(swedishQuery, [searchParam, searchParam, searchParam, word, `${word}%`]);
+                
+                if (swedishResults.length === 0) {
+                    document.getElementById('status').innerHTML = `
+                        <div class="success">No results found for "${word}"</div>
+                    `;
+                    displayResults([]);
+                    return;
+                }
+                
+                // Process results
                 const results = [];
-                for (const row of swedishResults) {
-                    const wordData = {
-                        id: row.id,
-                        ord: row.ord,
-                        bojningar: row.bojningar,
-                        ordklass: row.ordklass,
-                        uttal: row.uttal,
-                        definition: row.definition,
-                        synonym: row.synonym,
-                        exempel: row.exempel,
-                        publicerad: row.publicerad,
-                        translations: {}
-                    };
+                const columns = swedishResults[0].columns;
+                const values = swedishResults[0].values;
+                
+                for (const row of values) {
+                    const wordData = {};
+                    columns.forEach((col, index) => {
+                        wordData[col] = row[index];
+                    });
                     
-                    // Get translations
+                    // Get translations for this word
+                    wordData.translations = {};
                     const languages = ['english', 'korean', 'spanish', 'chinese'];
+                    
                     for (const lang of languages) {
                         try {
-                            const translationResult = await conn.query(`
-                                SELECT ord, definition 
-                                FROM 'DictSV.duckdb'.${lang}_translations 
-                                WHERE id = $1
-                            `, [row.id]);
+                            const translationQuery = `SELECT ord, definition FROM ${lang}_translations WHERE id = ?`;
+                            const translationResult = db.exec(translationQuery, [wordData.id]);
                             
-                            if (translationResult.length > 0) {
-                                wordData.translations[lang] = translationResult[0];
+                            if (translationResult.length > 0 && translationResult[0].values.length > 0) {
+                                const transRow = translationResult[0].values[0];
+                                wordData.translations[lang] = {
+                                    ord: transRow[0],
+                                    definition: transRow[1]
+                                };
                             }
                         } catch (e) {
-                            // Translation table might not exist or be empty
-                            console.warn(`No ${lang} translations found`);
+                            // Translation table might not exist
+                            console.warn(`No ${lang} translations found:`, e.message);
                         }
                     }
                     
@@ -608,20 +612,8 @@
                 });
             });
             
-            // Wait a bit for the DuckDB library to load, then initialize
-            setTimeout(() => {
-                if (typeof duckdb !== 'undefined') {
-                    initializeDatabase();
-                } else {
-                    console.error('DuckDB library not loaded');
-                    document.getElementById('status').innerHTML = `
-                        <div class="error">
-                            ❌ DuckDB library failed to load. Please refresh the page.<br>
-                            <small>If the problem persists, check your internet connection.</small>
-                        </div>
-                    `;
-                }
-            }, 1000);
+            // Initialize the database
+            initializeDatabase();
         });
     </script>
 </body>
