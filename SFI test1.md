@@ -1,5 +1,6 @@
 $$ \frac{1}{e}= \frac{|frac{()}{2}|}{e}$$
 
+$$-1\pm\sqrt{3i}$$
 
 
 Test för SFI C nybörjare/ fortsättning
