@@ -1,3 +1,7 @@
+$$ \frac{1}{e}=1\sfrac{1}{2} $$
+
+
+
 Test för SFI C nybörjare/ fortsättning
 Detta kommer att ingà i testet.
 Siffror frän 1-100
