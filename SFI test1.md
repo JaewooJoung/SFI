@@ -1,6 +1,7 @@
 $$ \frac{1}{e}= \frac{|frac{()}{2}|}{e}$$
 
 $$-1\pm\sqrt{3i}$$
+
 $$\displaystyle\sum_{n=0}^{\infty} frac{x^n}{n!}	$$
 
 
