@@ -1,4 +1,4 @@
-$$ \frac{1}{e}= \frac{|frac{()}{2}|}{e}$$
+$$ \frac{1}{e}= \frac{|\frac{-1\pm\sqrt{3i}}{2}|}{-\displaystyle\sum_{n=0}^{\infty} \frac{x^n}{n!}}$$
 
 $$|\frac{-1\pm\sqrt{3i}}{2}|$$
 
