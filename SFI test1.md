@@ -1,4 +1,4 @@
-$$ \frac{1}{e}=\frac{|1|}{e}$$
+$$ \frac{1}{e}=\frac{|frac{-1\pm\sqrt[3]{3i}}{2}|}{e}$$
 
 
 
