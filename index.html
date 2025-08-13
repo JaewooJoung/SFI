@@ -1,624 +1,517 @@
-<!DOCTYPE html>
-<html lang="en">
+<a href="#grammar" class="w3-bar-item w3-button w3-hover-light-grey">Grammatik</a><!DOCTYPE html>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Swedish Dictionary</title>
-    <script src="https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/sql-wasm.js"></script>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-            background: linear-gradient(135deg, #006AA7, #0099DD);
-            color: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0, 106, 167, 0.3);
-        }
-        
-        .header h1 {
-            margin: 0;
-            font-size: 2.5em;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-        
-        .header .subtitle {
-            margin-top: 10px;
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
-        
-        .search-container {
-            margin-bottom: 30px;
-            display: flex;
-            gap: 15px;
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        
-        #search-input {
-            flex-grow: 1;
-            padding: 15px;
-            font-size: 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            transition: border-color 0.3s;
-        }
-        
-        #search-input:focus {
-            outline: none;
-            border-color: #006AA7;
-            box-shadow: 0 0 0 3px rgba(0, 106, 167, 0.1);
-        }
-        
-        button {
-            padding: 15px 25px;
-            background: linear-gradient(135deg, #006AA7, #0099DD);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 16px;
-            transition: all 0.3s;
-            box-shadow: 0 4px 12px rgba(0, 106, 167, 0.3);
-        }
-        
-        button:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 106, 167, 0.4);
-        }
-        
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-        
-        .language-tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-            flex-wrap: wrap;
-        }
-        
-        .tab {
-            padding: 10px 20px;
-            border: 2px solid #e0e0e0;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: white;
-            font-size: 14px;
-        }
-        
-        .tab.active {
-            background: #006AA7;
-            color: white;
-            border-color: #006AA7;
-        }
-        
-        .result {
-            margin-bottom: 20px;
-            border: none;
-            padding: 25px;
-            border-radius: 15px;
-            background: white;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            transition: transform 0.3s;
-        }
-        
-        .result:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-        }
-        
-        .word-header {
-            display: flex;
-            align-items: baseline;
-            gap: 15px;
-            flex-wrap: wrap;
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 15px;
-            margin-bottom: 15px;
-        }
-        
-        .word {
-            font-size: 28px;
-            font-weight: bold;
-            color: #006AA7;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-        }
-        
-        .word-class {
-            color: #7f8c8d;
-            font-style: italic;
-            background: #f8f9fa;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.9em;
-        }
-        
-        .pronunciation {
-            font-style: italic;
-            color: #7f8c8d;
-            margin: 8px 0;
-            background: #f8f9fa;
-            padding: 8px;
-            border-radius: 6px;
-        }
-        
-        .definition {
-            margin: 15px 0;
-            line-height: 1.6;
-            font-size: 16px;
-        }
-        
-        .example {
-            background: linear-gradient(135deg, #e8f4f8, #d6e9f0);
-            padding: 15px;
-            border-left: 4px solid #006AA7;
-            margin: 15px 0;
-            font-style: italic;
-            border-radius: 8px;
-        }
-        
-        .inflections, .synonyms {
-            margin: 10px 0;
-            font-size: 0.95em;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 6px;
-        }
-        
-        .synonyms {
-            color: #2c3e50;
-        }
-        
-        .translations {
-            margin-top: 20px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-        
-        .translation {
-            background: #f8f9fa;
-            padding: 12px;
-            border-radius: 8px;
-            border-left: 3px solid #006AA7;
-        }
-        
-        .translation-lang {
-            font-weight: bold;
-            color: #006AA7;
-            margin-bottom: 5px;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        
-        .loading .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #006AA7;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        #status {
-            margin: 20px 0;
-            font-size: 0.9em;
-            color: #666;
-            text-align: center;
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-        }
-        
-        .error {
-            background: #ff6b6b !important;
-            color: white;
-        }
-        
-        .success {
-            background: #51cf66 !important;
-            color: white;
-        }
-        
-        @media (max-width: 768px) {
-            .search-container {
-                flex-direction: column;
-            }
-            
-            .word {
-                font-size: 24px;
-            }
-            
-            .translations {
-                grid-template-columns: 1fr;
-            }
-            
-            .language-tabs {
-                justify-content: center;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://www.w3schools.com/w3css/5/w3.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<style>
+body,h1 {font-family: "Raleway", Arial, sans-serif}
+h1 {letter-spacing: 6px}
+.w3-row-padding img {margin-bottom: 12px}
+.lesson-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+}
+.level-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  border-radius: 50px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: bold;
+}
+.beginner { background-color: #4CAF50; }
+.intermediate { background-color: #FF9800; }
+.advanced { background-color: #F44336; }
+.sentence-analysis {
+  font-family: "Raleway", Arial, sans-serif;
+  border: 1px solid #ddd;
+  padding: 15px;
+  border-radius: 5px;
+  background: white;
+}
+.word {
+  font-size: 16px;
+  font-weight: 500;
+  padding: 5px;
+}
+.word-label {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+.arrows {
+  text-align: center;
+  font-size: 18px;
+}
+</style>
 </head>
-<body>
-    <div class="header">
-        <h1>🇸🇪 Swedish Dictionary</h1>
-        <div class="subtitle">Svensk-Engelsk Ordbok med Översättningar</div>
+
+<body class="w3-content w3-black" style="max-width:1500px;">
+
+<!-- Header -->
+<header class="w3-panel w3-center w3-opacity" style="padding:32px 16px">
+  <h1 class="w3-xlarge">SVENSKA LEKTIONER</h1>
+  <h1>Swedish Lessons</h1>
+  
+  <div class="w3-padding-32">
+    <div class="w3-bar w3-border">
+      <a href="#" class="w3-bar-item w3-button">Hem</a>
+      <a href="#beginner" class="w3-bar-item w3-button w3-light-grey">Nybörjare</a>
+      <a href="#intermediate" class="w3-bar-item w3-button w3-hover-light-grey">Mellannivå</a>
+      <a href="#advanced" class="w3-bar-item w3-button w3-hover-light-grey">Avancerad</a>
+
     </div>
-    
-    <div class="search-container">
-        <input type="text" id="search-input" placeholder="Search Swedish or English words..." autofocus>
-        <button id="search-btn">🔍 Search</button>
-    </div>
-    
-    <div class="language-tabs">
-        <div class="tab active" data-lang="all">All Languages</div>
-        <div class="tab" data-lang="swedish">Swedish Only</div>
-        <div class="tab" data-lang="english">With English</div>
-        <div class="tab" data-lang="korean">With Korean</div>
-        <div class="tab" data-lang="spanish">With Spanish</div>
-        <div class="tab" data-lang="chinese">With Chinese</div>
-    </div>
-    
-    <div id="status">
-        <div class="loading">
-            <div class="spinner"></div>
-            Initializing SQLite and loading database...
+  </div>
+</header>
+
+<!-- Photo Grid -->
+<div class="w3-row" id="myGrid" style="margin-bottom:128px">
+
+  <!-- Beginner Section -->
+  <div id="beginner" class="w3-container w3-white w3-padding-32">
+    <h2 class="w3-center"><i class="fa fa-star w3-text-green"></i> NYBÖRJARE - Beginner Lessons</h2>
+    <div class="w3-row-padding w3-margin-top">
+      
+      <div class="w3-third">
+        <div class="w3-card-4 w3-hover-shadow lesson-card" style="position: relative;">
+          <div class="level-badge beginner w3-text-white">Nybörjare</div>
+          <div class="w3-container w3-white">
+            <h4><i class="fa fa-comment"></i> Lektion 1: Hej och Hejdå</h4>
+            <p>Learn basic greetings and farewells in Swedish</p>
+            <ul class="w3-ul">
+              <li>Hej, Hejdå, Tack</li>
+              <li>Pronunciation practice</li>
+              <li>Common courtesy phrases</li>
+            </ul>
+            <button class="w3-button w3-blue w3-margin-bottom">Starta Lektion</button>
+          </div>
         </div>
+      </div>
+
+      <div class="w3-third">
+        <div class="w3-card-4 w3-hover-shadow lesson-card" style="position: relative;">
+          <div class="level-badge beginner w3-text-white">Nybörjare</div>
+          <div class="w3-container w3-white">
+            <h4><i class="fa fa-user"></i> Lektion 2: Att Presentera Sig</h4>
+            <p>Introduce yourself and ask for names</p>
+            <ul class="w3-ul">
+              <li>Jag heter... / Vad heter du?</li>
+              <li>Personal information</li>
+              <li>Numbers 1-10</li>
+            </ul>
+            <button class="w3-button w3-blue w3-margin-bottom">Starta Lektion</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="w3-third">
+        <div class="w3-card-4 w3-hover-shadow lesson-card" style="position: relative;">
+          <div class="level-badge beginner w3-text-white">Nybörjare</div>
+          <div class="w3-container w3-white">
+            <h4><i class="fa fa-home"></i> Lektion 3: Familj och Hem</h4>
+            <p>Family members and home vocabulary</p>
+            <ul class="w3-ul">
+              <li>Mamma, pappa, syster, bror</li>
+              <li>House and room names</li>
+              <li>Possessive pronouns</li>
+            </ul>
+            <button class="w3-button w3-blue w3-margin-bottom">Starta Lektion</button>
+          </div>
+        </div>
+      </div>
+
     </div>
-    
-    <div id="results"></div>
-    
-    <script>
-        let db = null;
-        let dbLoaded = false;
-        let currentLanguageFilter = 'all';
-        
-        // Initialize SQL.js and load database
-        async function initializeDatabase() {
-            try {
-                document.getElementById('status').innerHTML = `
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        Initializing SQLite WebAssembly...
-                    </div>
-                `;
-                
-                // Wait for SQL.js to be available
-                if (typeof initSqlJs === 'undefined') {
-                    throw new Error('SQL.js library failed to load. Please refresh the page.');
-                }
-                
-                // Initialize SQL.js
-                const SQL = await initSqlJs({
-                    locateFile: file => `https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/${file}`
-                });
-                
-                document.getElementById('status').innerHTML = `
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        Loading dictionary database...
-                    </div>
-                `;
-                
-                // Try multiple database paths - SQLite version
-                const dbPaths = [
-                    './db/DictSV.sqlite',
-                    './db/DictSV.db',
-                    '/SFI/db/DictSV.sqlite',
-                    '/SFI/db/DictSV.db',
-                    'db/DictSV.sqlite',
-                    'db/DictSV.db',
-                    'https://jaewoojoung.github.io/SFI/db/DictSV.sqlite',
-                    'https://jaewoojoung.github.io/SFI/db/DictSV.db'
-                ];
-                
-                let dbLoadedSuccess = false;
-                let lastError = null;
-                const startTime = performance.now();
-                
-                for (const dbPath of dbPaths) {
-                    try {
-                        console.log(`Trying to load SQLite database from: ${dbPath}`);
-                        const response = await fetch(dbPath);
-                        
-                        if (!response.ok) {
-                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                        }
-                        
-                        const buffer = await response.arrayBuffer();
-                        db = new SQL.Database(new Uint8Array(buffer));
-                        
-                        // Test the database connection
-                        const testQuery = db.exec("SELECT COUNT(*) as count FROM swedish_dict");
-                        if (testQuery.length === 0) {
-                            throw new Error('Database loaded but swedish_dict table not found');
-                        }
-                        
-                        const wordCount = testQuery[0].values[0][0];
-                        
-                        const loadTime = ((performance.now() - startTime)/1000).toFixed(2);
-                        document.getElementById('status').innerHTML = `
-                            <div class="success">
-                                ✅ SQLite database loaded successfully in ${loadTime} seconds!<br>
-                                📚 Found ${wordCount} Swedish words. Ready to search!
-                            </div>
-                        `;
-                        
-                        dbLoadedSuccess = true;
-                        break;
-                        
-                    } catch (error) {
-                        console.warn(`Failed to load from ${dbPath}:`, error.message);
-                        lastError = error;
-                        continue;
-                    }
-                }
-                
-                if (!dbLoadedSuccess) {
-                    throw lastError || new Error('Failed to load database from any path');
-                }
-                
-                dbLoaded = true;
-                
-                // Enable search controls
-                document.getElementById('search-btn').disabled = false;
-                document.getElementById('search-input').disabled = false;
-                document.getElementById('search-input').focus();
-                
-            } catch (error) {
-                console.error("Database initialization error:", error);
-                document.getElementById('status').innerHTML = `
-                    <div class="error">
-                        ❌ Error loading SQLite database: ${error.message}<br>
-                        <details style="margin-top: 10px;">
-                            <summary>Troubleshooting</summary>
-                            <ul style="text-align: left; margin: 10px 0;">
-                                <li>Check if DictSV.sqlite or DictSV.db exists in the /db/ folder</li>
-                                <li>Convert your DuckDB to SQLite format</li>
-                                <li>Verify the file is accessible via HTTP</li>
-                                <li>Try refreshing the page</li>
-                                <li>Check browser console for detailed errors</li>
-                            </ul>
-                        </details>
-                    </div>
-                `;
-            }
-        }
-        
-        // Search function with translation support
-        async function searchWord() {
-            if (!dbLoaded || !db) return;
+  </div>
+
+  <!-- Intermediate Section -->
+  <div id="intermediate" class="w3-container w3-light-grey w3-padding-32">
+    <h2 class="w3-center"><i class="fa fa-star-half-o w3-text-orange"></i> MELLANNIVÅ - Intermediate Lessons</h2>
+    <div class="w3-row-padding w3-margin-top">
+      
+      <div class="w3-third">
+        <div class="w3-card-4 w3-hover-shadow lesson-card" style="position: relative;">
+          <div class="level-badge intermediate w3-text-white">Mellannivå</div>
+          <div class="w3-container w3-white">
+            <h4><i class="fa fa-clock-o"></i> Lektion 4: Tid och Schema</h4>
+            <p>Time expressions and daily schedules</p>
+            <ul class="w3-ul">
+              <li>Klockan är... / Vad är klockan?</li>
+              <li>Days of the week</li>
+              <li>Daily routines</li>
+            </ul>
+            <button class="w3-button w3-orange w3-margin-bottom">Starta Lektion</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="w3-third">
+        <div class="w3-card-4 w3-hover-shadow lesson-card" style="position: relative;">
+          <div class="level-badge intermediate w3-text-white">Mellannivå</div>
+          <div class="w3-container w3-white">
+            <h4><i class="fa fa-shopping-cart"></i> Lektion 5: Handla Mat</h4>
+            <p>Shopping for food and asking for prices</p>
+            <ul class="w3-ul">
+              <li>Food vocabulary</li>
+              <li>Vad kostar...? / Hur mycket?</li>
+              <li>Quantities and measurements</li>
+            </ul>
+            <button class="w3-button w3-orange w3-margin-bottom">Starta Lektion</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="w3-third">
+        <div class="w3-card-4 w3-hover-shadow lesson-card" style="position: relative;">
+          <div class="level-badge intermediate w3-text-white">Mellannivå</div>
+          <div class="w3-container w3-white">
+            <h4><i class="fa fa-map-marker"></i> Lektion 6: Vägbeskrivningar</h4>
+            <p>Giving and asking for directions</p>
+            <ul class="w3-ul">
+              <li>Var ligger...? / Hur kommer jag till...?</li>
+              <li>Left, right, straight ahead</li>
+              <li>Transportation vocabulary</li>
+            </ul>
+            <button class="w3-button w3-orange w3-margin-bottom">Starta Lektion</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Grammar Section -->
+  <div id="grammar" class="w3-container w3-white w3-padding-32">
+    <h2 class="w3-center"><i class="fa fa-book w3-text-blue"></i> GRAMMATIK - Grammar Lessons</h2>
+    <div class="w3-row-padding w3-margin-top">
+      
+      <div class="w3-full">
+        <div class="w3-card-4 w3-hover-shadow lesson-card" style="position: relative;">
+          <div class="level-badge intermediate w3-text-white">Grammatik</div>
+          <div class="w3-container w3-white">
+            <h4><i class="fa fa-arrows"></i> Huvudsatser - Main Clauses Word Order</h4>
+            <p>Learn Swedish sentence structure with interactive examples</p>
             
-            const word = document.getElementById('search-input').value.trim();
-            if (!word) return;
-            
-            document.getElementById('status').innerHTML = `
-                <div class="loading">
-                    <div class="spinner"></div>
-                    Searching for "${word}"...
+            <div class="w3-row-padding w3-margin-top">
+              <div class="w3-half">
+                <h5 class="w3-text-blue">Rak ordföljd (Straight word order)</h5>
+                
+                <div class="w3-panel w3-light-grey w3-margin-bottom">
+                  <h6>Med ett verb (With one verb):</h6>
+                  <div class="sentence-analysis">
+                    <div class="w3-row">
+                      <div class="w3-quarter w3-center">
+                        <span class="word-label w3-text-yellow" style="font-weight: bold;">S</span><br>
+                        <span class="word">Katten</span>
+                      </div>
+                      <div class="w3-quarter w3-center">
+                        <span class="word-label w3-text-yellow" style="font-weight: bold;">V</span><br>
+                        <span class="word">springer</span>
+                      </div>
+                      <div class="w3-quarter w3-center">
+                        <span class="word-label w3-text-yellow" style="font-weight: bold;">P</span><br>
+                        <span class="word">till</span>
+                      </div>
+                      <div class="w3-quarter w3-center">
+                        <span class="word-label w3-text-yellow" style="font-weight: bold;"></span><br>
+                        <span class="word">huset</span>
+                      </div>
+                    </div>
+                    <div class="w3-margin-top">
+                      <span class="w3-text-blue">→ The cat runs to the house</span>
+                    </div>
+                  </div>
                 </div>
-            `;
-            document.getElementById('search-btn').disabled = true;
-            
-            try {
-                const startTime = performance.now();
-                
-                // Main Swedish dictionary query
-                const searchParam = `%${word}%`;
-                const swedishQuery = `
-                    SELECT 
-                        id, ord, bojningar, ordklass, uttal, definition, synonym, exempel, publicerad
-                    FROM swedish_dict 
-                    WHERE 
-                        ord LIKE ? COLLATE NOCASE
-                        OR definition LIKE ? COLLATE NOCASE
-                        OR synonym LIKE ? COLLATE NOCASE
-                    ORDER BY 
-                        CASE 
-                            WHEN ord = ? THEN 1
-                            WHEN ord LIKE ? THEN 2
-                            ELSE 3
-                        END,
-                        ord
-                    LIMIT 20
-                `;
-                
-                const swedishResults = db.exec(swedishQuery, [searchParam, searchParam, searchParam, word, `${word}%`]);
-                
-                if (swedishResults.length === 0) {
-                    document.getElementById('status').innerHTML = `
-                        <div class="success">No results found for "${word}"</div>
-                    `;
-                    displayResults([]);
-                    return;
-                }
-                
-                // Process results
-                const results = [];
-                const columns = swedishResults[0].columns;
-                const values = swedishResults[0].values;
-                
-                for (const row of values) {
-                    const wordData = {};
-                    columns.forEach((col, index) => {
-                        wordData[col] = row[index];
-                    });
-                    
-                    // Get translations for this word
-                    wordData.translations = {};
-                    const languages = ['english', 'korean', 'spanish', 'chinese'];
-                    
-                    for (const lang of languages) {
-                        try {
-                            const translationQuery = `SELECT ord, definition, synonym, exempel FROM ${lang}_translations WHERE id = ?`;
-                            const translationResult = db.exec(translationQuery, [wordData.id]);
-                            
-                            if (translationResult.length > 0 && translationResult[0].values.length > 0) {
-                                const transRow = translationResult[0].values[0];
-                                wordData.translations[lang] = {
-                                    ord: transRow[0],
-                                    definition: transRow[1],
-                                    synonym: transRow[2],
-                                    exempel: transRow[3]
-                                };
-                            }
-                        } catch (e) {
-                            // Translation table might not exist
-                            console.warn(`No ${lang} translations found:`, e.message);
-                        }
-                    }
-                    
-                    results.push(wordData);
-                }
-                
-                const searchTime = ((performance.now() - startTime)/1000).toFixed(2);
-                document.getElementById('status').innerHTML = `
-                    <div class="success">Found ${results.length} results in ${searchTime} seconds</div>
-                `;
-                
-                displayResults(results);
-                
-            } catch (error) {
-                console.error("Search error:", error);
-                document.getElementById('status').innerHTML = `
-                    <div class="error">Search error: ${error.message}</div>
-                `;
-                document.getElementById('results').innerHTML = `
-                    <div class="result">
-                        <div class="error">An error occurred during search. Please try again.</div>
+
+                <div class="w3-panel w3-light-grey w3-margin-bottom">
+                  <h6>Med "inte" (With negation):</h6>
+                  <div class="sentence-analysis">
+                    <div class="w3-row">
+                      <div class="w3-fifth w3-center">
+                        <span class="word-label w3-text-yellow" style="font-weight: bold;">S</span><br>
+                        <span class="word">Jag</span>
+                      </div>
+                      <div class="w3-fifth w3-center">
+                        <span class="word-label w3-text-yellow" style="font-weight: bold;">V</span><br>
+                        <span class="word">äter</span>
+                      </div>
+                      <div class="w3-fifth w3-center">
+                        <span class="word-label w3-text-red" style="font-weight: bold;">inte</span><br>
+                        <span class="word">inte</span>
+                      </div>
+                      <div class="w3-fifth w3-center">
+                        <span class="word-label w3-text-yellow" style="font-weight: bold;">O</span><br>
+                        <span class="word">god</span>
+                      </div>
+                      <div class="w3-fifth w3-center">
+                        <span class="word-label w3-text-yellow" style="font-weight: bold;"></span><br>
+                        <span class="word">mat</span>
+                      </div>
                     </div>
-                `;
-            } finally {
-                document.getElementById('search-btn').disabled = false;
-            }
-        }
-        
-        // Display results with translations
-        function displayResults(results) {
-            const resultsContainer = document.getElementById('results');
-            
-            if (results.length === 0) {
-                resultsContainer.innerHTML = `
-                    <div class="result">
-                        <div style="text-align: center; padding: 20px;">
-                            <h3>No results found</h3>
-                            <p>Try a different search term or check your spelling.</p>
-                        </div>
+                    <div class="w3-margin-top">
+                      <span class="w3-text-blue">→ I don't eat good food</span>
                     </div>
-                `;
-                return;
-            }
-            
-            let html = '';
-            results.forEach(row => {
-                html += `
-                    <div class="result">
-                        <div class="word-header">
-                            <span class="word">${row.ord || 'N/A'}</span>
-                            ${row.ordklass ? `<span class="word-class">${row.ordklass}</span>` : ''}
-                        </div>
-                        
-                        ${row.bojningar ? `<div class="inflections"><strong>📝 Forms:</strong> ${row.bojningar}</div>` : ''}
-                        ${row.uttal ? `<div class="pronunciation"><strong>🔊 Pronunciation:</strong> ${row.uttal}</div>` : ''}
-                        ${row.definition ? `<div class="definition"><strong>Definition:</strong> ${row.definition}</div>` : ''}
-                        ${row.synonym ? `<div class="synonyms"><strong>🔗 Synonyms:</strong> ${row.synonym}</div>` : ''}
-                        ${row.exempel ? `<div class="example"><strong>💬 Example:</strong> ${row.exempel}</div>` : ''}
-                        
-                        ${Object.keys(row.translations).length > 0 ? `
-                            <div class="translations">
-                                ${Object.entries(row.translations).map(([lang, trans]) => `
-                                    <div class="translation">
-                                        <div class="translation-lang">${getLanguageEmoji(lang)} ${capitalizeFirst(lang)}</div>
-                                        <div><strong>Word:</strong> ${trans.ord || 'N/A'}</div>
-                                        ${trans.definition ? `<div><strong>Definition:</strong> ${trans.definition}</div>` : ''}
-                                        ${trans.synonym ? `<div><strong>Synonyms:</strong> ${trans.synonym}</div>` : ''}
-                                        ${trans.exempel ? `<div><strong>Example:</strong> ${trans.exempel}</div>` : ''}
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : ''}
-                        
-                        ${row.publicerad ? `<div style="font-size:0.8em;color:#999;margin-top:15px;text-align:right;">📅 Published: ${row.publicerad}</div>` : ''}
+                  </div>
+                </div>
+
+                <div class="w3-panel w3-light-grey w3-margin-bottom">
+                  <h6>Med hjälpverb (With auxiliary verb):</h6>
+                  <div class="sentence-analysis">
+                    <div class="w3-row">
+                      <div class="w3-fifth w3-center">
+                        <span class="word-label w3-text-yellow" style="font-weight: bold;">S</span><br>
+                        <span class="word">Jag</span>
+                      </div>
+                      <div class="w3-fifth w3-center">
+                        <span class="word-label w3-text-green" style="font-weight: bold;">HjV</span><br>
+                        <span class="word">vill</span>
+                      </div>
+                      <div class="w3-fifth w3-center">
+                        <span class="word-label w3-text-yellow" style="font-weight: bold;">V</span><br>
+                        <span class="word">äta</span>
+                      </div>
+                      <div class="w3-fifth w3-center">
+                        <span class="word-label w3-text-yellow" style="font-weight: bold;">O</span><br>
+                        <span class="word">god</span>
+                      </div>
+                      <div class="w3-fifth w3-center">
+                        <span class="word-label w3-text-yellow" style="font-weight: bold;"></span><br>
+                        <span class="word">mat</span>
+                      </div>
                     </div>
-                `;
-            });
+                    <div class="arrows w3-margin-top">
+                      <span style="color: orange; font-size: 20px;">↑ ↑ ↑ ↑</span>
+                    </div>
+                    <div class="w3-margin-top">
+                      <span class="w3-text-blue">→ I want to eat good food</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="w3-half">
+                <h5 class="w3-text-red">Omvänd ordföljd (Inverted word order)</h5>
+                
+                <div class="w3-panel w3-pale-red w3-margin-bottom">
+                  <h6>Med tidsuttryck först (Time expression first):</h6>
+                  <div class="sentence-analysis">
+                    <div class="w3-row">
+                      <div class="w3-quarter w3-center">
+                        <span class="word-label w3-text-purple" style="font-weight: bold;">T</span><br>
+                        <span class="word">Igår</span>
+                      </div>
+                      <div class="w3-quarter w3-center">
+                        <span class="word-label w3-text-yellow" style="font-weight: bold;">V</span><br>
+                        <span class="word">träffade</span>
+                      </div>
+                      <div class="w3-quarter w3-center">
+                        <span class="word-label w3-text-yellow" style="font-weight: bold;">S</span><br>
+                        <span class="word">jag</span>
+                      </div>
+                      <div class="w3-quarter w3-center">
+                        <span class="word-label w3-text-yellow" style="font-weight: bold;">O</span><br>
+                        <span class="word">min vän</span>
+                      </div>
+                    </div>
+                    <div class="w3-margin-top">
+                      <span class="w3-text-blue">→ Yesterday I met my friend</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="w3-panel w3-pale-red w3-margin-bottom">
+                  <h6>Med hjälpverb och inte (With auxiliary and negation):</h6>
+                  <div class="sentence-analysis">
+                    <div class="w3-row">
+                      <div class="w3-fifth w3-center">
+                        <span class="word-label w3-text-purple" style="font-weight: bold;">T</span><br>
+                        <span class="word">Igår</span>
+                      </div>
+                      <div class="w3-fifth w3-center">
+                        <span class="word-label w3-text-green" style="font-weight: bold;">HjV</span><br>
+                        <span class="word">ville</span>
+                      </div>
+                      <div class="w3-fifth w3-center">
+                        <span class="word-label w3-text-yellow" style="font-weight: bold;">S</span><br>
+                        <span class="word">jag</span>
+                      </div>
+                      <div class="w3-fifth w3-center">
+                        <span class="word-label w3-text-red" style="font-weight: bold;">inte</span><br>
+                        <span class="word">inte</span>
+                      </div>
+                      <div class="w3-fifth w3-center">
+                        <span class="word-label w3-text-yellow" style="font-weight: bold;">V</span><br>
+                        <span class="word">träffa</span>
+                      </div>
+                    </div>
+                    <div class="arrows w3-margin-top">
+                      <span style="color: orange; font-size: 20px;">↑ ↑ ↑ ↑ ↑</span>
+                    </div>
+                    <div class="w3-margin-top">
+                      <span class="w3-text-blue">→ Yesterday I didn't want to meet...</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="w3-panel w3-pale-yellow w3-margin-bottom">
+                  <h6>Regel (Rule):</h6>
+                  <p><strong>Rak ordföljd:</strong> Subjekt kommer före verbet<br>
+                  <strong>Omvänd ordföljd:</strong> Verbet kommer före subjektet när meningen börjar med något annat än subjektet</p>
+                </div>
+              </div>
+            </div>
             
-            resultsContainer.innerHTML = html;
-        }
-        
-        function getLanguageEmoji(lang) {
-            const emojis = {
-                'english': '🇺🇸',
-                'korean': '🇰🇷', 
-                'spanish': '🇪🇸',
-                'chinese': '🇨🇳'
-            };
-            return emojis[lang] || '🌐';
-        }
-        
-        function capitalizeFirst(str) {
-            return str.charAt(0).toUpperCase() + str.slice(1);
-        }
-        
-        // Initialize everything when page loads
-        document.addEventListener('DOMContentLoaded', () => {
-            // Disable search until DB is loaded
-            document.getElementById('search-btn').disabled = true;
-            document.getElementById('search-input').disabled = true;
-            
-            // Set up event listeners
-            document.getElementById('search-btn').addEventListener('click', searchWord);
-            document.getElementById('search-input').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') searchWord();
-            });
-            
-            // Language tab functionality
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.addEventListener('click', () => {
-                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
-                    currentLanguageFilter = tab.dataset.lang;
-                });
-            });
-            
-            // Initialize the database
-            initializeDatabase();
-        });
-    </script>
+            <div class="w3-center w3-margin-top">
+              <button class="w3-button w3-blue w3-large">Öva Ordföljd - Practice Word Order</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Advanced Section -->
+  <div id="advanced" class="w3-container w3-white w3-padding-32">
+    <h2 class="w3-center"><i class="fa fa-star w3-text-red"></i> AVANCERAD - Advanced Lessons</h2>
+    <div class="w3-row-padding w3-margin-top">
+      
+      <div class="w3-third">
+        <div class="w3-card-4 w3-hover-shadow lesson-card" style="position: relative;">
+          <div class="level-badge advanced w3-text-white">Avancerad</div>
+          <div class="w3-container w3-white">
+            <h4><i class="fa fa-briefcase"></i> Lektion 7: Arbete och Karriär</h4>
+            <p>Professional conversations and job interviews</p>
+            <ul class="w3-ul">
+              <li>Job titles and workplace vocabulary</li>
+              <li>Formal vs informal language</li>
+              <li>CV and interview expressions</li>
+            </ul>
+            <button class="w3-button w3-red w3-margin-bottom">Starta Lektion</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="w3-third">
+        <div class="w3-card-4 w3-hover-shadow lesson-card" style="position: relative;">
+          <div class="level-badge advanced w3-text-white">Avancerad</div>
+          <div class="w3-container w3-white">
+            <h4><i class="fa fa-newspaper-o"></i> Lektion 8: Nyheter och Opinion</h4>
+            <p>Discussing current events and expressing opinions</p>
+            <ul class="w3-ul">
+              <li>News vocabulary</li>
+              <li>Jag tycker att... / Enligt min åsikt...</li>
+              <li>Debate and discussion phrases</li>
+            </ul>
+            <button class="w3-button w3-red w3-margin-bottom">Starta Lektion</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="w3-third">
+        <div class="w3-card-4 w3-hover-shadow lesson-card" style="position: relative;">
+          <div class="level-badge advanced w3-text-white">Avancerad</div>
+          <div class="w3-container w3-white">
+            <h4><i class="fa fa-book"></i> Lektion 9: Svensk Litteratur</h4>
+            <p>Exploring Swedish literature and culture</p>
+            <ul class="w3-ul">
+              <li>Famous Swedish authors</li>
+              <li>Literary vocabulary</li>
+              <li>Cultural references and idioms</li>
+            </ul>
+            <button class="w3-button w3-red w3-margin-bottom">Starta Lektion</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Progress Section -->
+<div class="w3-container w3-dark-grey w3-center w3-padding-32">
+  <h2><i class="fa fa-trophy"></i> Dina Framsteg - Your Progress</h2>
+  <div class="w3-row w3-margin-top">
+    <div class="w3-third">
+      <div class="w3-card w3-container w3-green w3-padding-16">
+        <h3>Nybörjare</h3>
+        <h4>2/3 Lektioner Klara</h4>
+        <div class="w3-progress-container w3-white">
+          <div class="w3-progressbar w3-green" style="width:67%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="w3-third">
+      <div class="w3-card w3-container w3-orange w3-padding-16">
+        <h3>Mellannivå</h3>
+        <h4>1/3 Lektioner Klara</h4>
+        <div class="w3-progress-container w3-white">
+          <div class="w3-progressbar w3-orange" style="width:33%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="w3-third">
+      <div class="w3-card w3-container w3-red w3-padding-16">
+        <h3>Avancerad</h3>
+        <h4>0/3 Lektioner Klara</h4>
+        <div class="w3-progress-container w3-white">
+          <div class="w3-progressbar w3-red" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Footer -->
+<footer class="w3-container w3-padding-64 w3-center w3-black w3-xlarge">
+  <a href="#"><i class="fa fa-facebook-official w3-hover-text-indigo"></i></a>
+  <a href="#"><i class="fa fa-pinterest-p w3-hover-text-red"></i></a>
+  <a href="#"><i class="fa fa-twitter w3-hover-text-light-blue"></i></a>
+  <a href="#"><i class="fa fa-linkedin w3-hover-text-indigo"></i></a>
+  <p class="w3-medium">© 2025 Svenska Lektioner. All rights reserved.</p>
+</footer>
+
+<script>
+// Filter lessons by level
+function filterLessons(level) {
+  var sections = document.querySelectorAll('.w3-container');
+  sections.forEach(function(section) {
+    if (section.id === level || level === 'all') {
+      section.style.display = 'block';
+    } else if (section.id && section.id !== '') {
+      section.style.display = 'none';
+    }
+  });
+}
+
+// Add smooth scrolling
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function (e) {
+    e.preventDefault();
+    document.querySelector(this.getAttribute('href')).scrollIntoView({
+      behavior: 'smooth'
+    });
+  });
+});
+
+// Progress bar animation
+window.addEventListener('scroll', function() {
+  const progressBars = document.querySelectorAll('.w3-progressbar');
+  progressBars.forEach(bar => {
+    const rect = bar.getBoundingClientRect();
+    if (rect.top < window.innerHeight && rect.bottom > 0) {
+      bar.style.animation = 'progressAnimation 2s ease-in-out';
+    }
+  });
+});
+</script>
+
 </body>
 </html>
